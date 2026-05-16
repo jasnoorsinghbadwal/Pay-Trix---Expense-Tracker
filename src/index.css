@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-charcoal-800/40 backdrop-blur-md border border-gray-200/50 dark:border-white/10 shadow-xl;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}

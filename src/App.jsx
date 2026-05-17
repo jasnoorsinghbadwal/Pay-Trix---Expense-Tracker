@@ -12,6 +12,7 @@ import { Analytics } from './components/Analytics';
 import { Onboarding } from './components/Onboarding';
 import { AccountsPage } from './components/AccountsPage';
 import { ProfilePage } from './components/ProfilePage';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 
 function App() {
   const { state } = useFinance();
@@ -123,6 +124,7 @@ function App() {
           }
         }} 
       />
+      <VercelAnalytics />
     </div>
   );
 }

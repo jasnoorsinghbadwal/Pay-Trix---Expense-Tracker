@@ -4,6 +4,7 @@ import { Search, Trash2, Edit2 } from 'lucide-react';
 import { getCategory } from '../utils/constants';
 import toast from 'react-hot-toast';
 import { TransactionModal } from './TransactionModal';
+import { isTransactionInPeriod } from '../utils/dateFilters';
 
 export function TransactionsPage() {
   const { state, dispatch } = useFinance();
@@ -22,7 +23,8 @@ export function TransactionsPage() {
   const filteredTransactions = state.transactions.filter(t => {
     const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || t.type === filterType;
-    return matchesSearch && matchesType;
+    const matchesPeriod = isTransactionInPeriod(t.date, state.settings.selectedPeriod, state.settings.customStartDate, state.settings.customEndDate);
+    return matchesSearch && matchesType && matchesPeriod;
   });
 
   return (

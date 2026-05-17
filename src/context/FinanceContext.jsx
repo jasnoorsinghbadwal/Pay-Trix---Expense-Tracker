@@ -4,13 +4,16 @@ const FinanceContext = createContext();
 
 const initialState = {
   transactions: [],
-  budgets: {}, // { categoryId: { amount, accountId } }
+  budgets: [], // Array of { id, category, amount, accountId, period, startDate, endDate, dismissed }
   accounts: [], // { id, name, type, initialBalance }
   settings: {
     theme: 'dark',
     currency: '₹',
     userName: '',
     isSetup: false,
+    selectedPeriod: 'this-month', // 'this-month', 'last-month', 'this-week', 'all-time', 'custom'
+    customStartDate: '',
+    customEndDate: ''
   }
 };
 
@@ -37,17 +40,29 @@ function financeReducer(state, action) {
       };
     case 'DELETE_TRANSACTION':
       return { ...state, transactions: state.transactions.filter(t => t.id !== action.payload) };
-    case 'SET_BUDGET':
+    
+    // Modernized Budget Actions
+    case 'ADD_BUDGET':
       return { 
         ...state, 
-        budgets: { 
-          ...state.budgets, 
-          [action.payload.category]: { 
-            amount: action.payload.amount, 
-            accountId: action.payload.accountId 
-          } 
-        } 
+        budgets: [...state.budgets, action.payload] 
       };
+    case 'EDIT_BUDGET':
+      return {
+        ...state,
+        budgets: state.budgets.map(b => b.id === action.payload.id ? action.payload : b)
+      };
+    case 'DELETE_BUDGET':
+      return { 
+        ...state, 
+        budgets: state.budgets.filter(b => b.id !== action.payload) 
+      };
+    case 'DISMISS_BUDGET':
+      return {
+        ...state,
+        budgets: state.budgets.map(b => b.id === action.payload ? { ...b, dismissed: true } : b)
+      };
+
     case 'ADD_ACCOUNT':
       return { ...state, accounts: [...(state.accounts || []), action.payload] };
     case 'EDIT_ACCOUNT':
@@ -61,13 +76,47 @@ function financeReducer(state, action) {
     case 'RESET_APP':
       localStorage.removeItem('finance_data');
       return initialState;
+    
+    case 'SET_PERIOD':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          selectedPeriod: action.payload.period,
+          customStartDate: action.payload.startDate || '',
+          customEndDate: action.payload.endDate || ''
+        }
+      };
+
     case 'LOAD_DATA':
+      let parsedBudgets = [];
+      if (action.payload.budgets) {
+        if (Array.isArray(action.payload.budgets)) {
+          parsedBudgets = action.payload.budgets;
+        } else {
+          // Convert legacy object budget to array
+          parsedBudgets = Object.keys(action.payload.budgets).map((catId, idx) => {
+            const val = action.payload.budgets[catId];
+            return {
+              id: `legacy-${catId}-${idx}-${Date.now()}`,
+              category: catId,
+              amount: typeof val === 'object' ? val.amount : val,
+              accountId: typeof val === 'object' ? val.accountId : '',
+              period: 'monthly',
+              startDate: new Date().toISOString().split('T')[0],
+              endDate: '',
+              dismissed: false
+            };
+          });
+        }
+      }
       return { 
         ...state, 
         ...action.payload,
+        budgets: parsedBudgets,
         accounts: action.payload.accounts || [],
         settings: {
-          ...state.settings,
+          ...initialState.settings,
           ...(action.payload.settings || {})
         }
       };

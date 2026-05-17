@@ -3,6 +3,8 @@ import { Sun, Moon, Download, X } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import toast from 'react-hot-toast';
 
+import { PeriodSelector } from './PeriodSelector';
+
 export function Header({ title }) {
   const { state, dispatch } = useFinance();
   const userName = state.settings.userName || 'User';
@@ -50,7 +52,10 @@ export function Header({ title }) {
 
   return (
     <header className="h-20 border-b border-gray-200/50 dark:border-white/10 flex items-center px-4 md:px-8 justify-between shrink-0 sticky top-0 bg-white/80 dark:bg-navy-900/80 backdrop-blur-lg z-10 transition-colors duration-300">
-      <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{title}</h2>
+      <div className="flex items-center gap-3 min-w-0">
+        <h2 className="text-sm md:text-2xl font-semibold tracking-tight text-gray-900 dark:text-white truncate hidden sm:block">{title}</h2>
+        <PeriodSelector />
+      </div>
       
       <div className="flex items-center gap-3 md:gap-5">
         <button 

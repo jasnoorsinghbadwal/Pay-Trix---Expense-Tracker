@@ -137,13 +137,13 @@ export function TransactionModal({ isOpen, onClose, editData = null }) {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="min-w-0">
+                <div className="min-w-0 overflow-hidden">
                   <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1.5 ml-1">Date</label>
                   <input 
                     type="date" 
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 transition-all text-sm text-gray-900 dark:text-white dark:color-scheme-dark"
+                    className="w-full max-w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 transition-all text-sm text-gray-900 dark:text-white dark:color-scheme-dark box-border"
                     required
                   />
                 </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
-import { User, Download, LogOut, Check, X, AlertTriangle } from 'lucide-react';
+import { User, Download, LogOut, Check, X, AlertTriangle, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function ProfilePage() {
@@ -25,6 +25,35 @@ export function ProfilePage() {
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
     toast.success('Data exported as JSON');
+  };
+
+  const handleImportJSON = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileReader = new FileReader();
+    fileReader.onload = (event) => {
+      try {
+        const parsedData = JSON.parse(event.target.result);
+        
+        // Safety schema verification
+        if (parsedData && Array.isArray(parsedData.transactions) && Array.isArray(parsedData.accounts)) {
+          dispatch({ type: 'LOAD_DATA', payload: parsedData });
+          
+          if (parsedData.settings) {
+            setName(parsedData.settings.userName || '');
+            setCurrency(parsedData.settings.currency || '₹');
+          }
+          
+          toast.success('Backup restored successfully!');
+        } else {
+          toast.error('Invalid backup file structure!');
+        }
+      } catch (err) {
+        toast.error('Failed to parse backup file!');
+      }
+    };
+    fileReader.readAsText(file);
   };
 
   const handleLogout = (wipeData) => {
@@ -94,14 +123,29 @@ export function ProfilePage() {
         {/* Data & Security */}
         <div className="space-y-6 md:space-y-8">
           <div className="glass p-5 md:p-6 rounded-2xl">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Export Data</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Download a copy of all your transactions, budgets, and accounts as a JSON file for backup.</p>
-            <button 
-              onClick={downloadJSON}
-              className="w-full py-3.5 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gray-200 dark:border-white/5"
-            >
-              <Download size={18} /> Download Backup
-            </button>
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Sync & Backups</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Keep your data identical across standard browsers and installed home screen PWA versions on this device.</p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button 
+                onClick={downloadJSON}
+                className="py-3 px-4 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gray-200 dark:border-white/5 text-sm"
+              >
+                <Download size={16} /> Export Backup
+              </button>
+              
+              <label 
+                className="py-3 px-4 bg-gold-500/10 hover:bg-gold-500/20 text-gold-600 dark:text-gold-400 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gold-500/20 dark:border-gold-500/10 cursor-pointer text-sm shadow-sm"
+              >
+                <Upload size={16} /> Import Backup
+                <input 
+                  type="file" 
+                  accept=".json" 
+                  onChange={handleImportJSON} 
+                  className="hidden" 
+                />
+              </label>
+            </div>
           </div>
 
           <div className="glass p-5 md:p-6 rounded-2xl border border-rose-200 dark:border-rose-500/20">

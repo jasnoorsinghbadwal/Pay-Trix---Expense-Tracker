@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
-import { User, Download, LogOut, Check, X, AlertTriangle, Upload } from 'lucide-react';
+import { User, Download, LogOut, Check, X, AlertTriangle, Upload, Lock, Unlock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function ProfilePage() {
@@ -8,6 +8,13 @@ export function ProfilePage() {
   const [name, setName] = useState(state.settings.userName);
   const [currency, setCurrency] = useState(state.settings.currency);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  
+  const [isLockModalOpen, setIsLockModalOpen] = useState(false);
+  const [lockInput, setLockInput] = useState('');
+  const [lockConfirm, setLockConfirm] = useState('');
+  const [lockStep, setLockStep] = useState('initial'); // 'initial', 'confirm', 'remove'
+
+  const hasAppLock = !!state.settings.appLock;
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
@@ -64,6 +71,41 @@ export function ProfilePage() {
       dispatch({ type: 'LOGOUT' });
       toast.success('Logged out successfully. Data retained.');
     }
+  };
+
+  const handleLockSubmit = (e) => {
+    e.preventDefault();
+    if (lockStep === 'remove') {
+      if (lockInput === state.settings.appLock) {
+        dispatch({ type: 'UPDATE_PROFILE', payload: { appLock: null } });
+        toast.success('App Lock removed successfully');
+        setIsLockModalOpen(false);
+        setLockInput('');
+      } else {
+        toast.error('Incorrect password');
+      }
+    } else if (lockStep === 'initial') {
+      if (!lockInput) return;
+      setLockStep('confirm');
+    } else if (lockStep === 'confirm') {
+      if (lockInput === lockConfirm) {
+        dispatch({ type: 'UPDATE_PROFILE', payload: { appLock: lockInput } });
+        toast.success('App Lock enabled successfully');
+        setIsLockModalOpen(false);
+        setLockInput('');
+        setLockConfirm('');
+        setLockStep('initial');
+      } else {
+        toast.error('Passwords do not match');
+      }
+    }
+  };
+
+  const openLockModal = () => {
+    setLockInput('');
+    setLockConfirm('');
+    setLockStep(hasAppLock ? 'remove' : 'initial');
+    setIsLockModalOpen(true);
   };
 
   return (
@@ -148,6 +190,18 @@ export function ProfilePage() {
             </div>
           </div>
 
+          <div className="glass p-5 md:p-6 rounded-2xl">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Security</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Secure your app with a password or PIN. You will be prompted to enter it whenever you open the app.</p>
+            
+            <button 
+              onClick={openLockModal}
+              className={`w-full py-3.5 font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${hasAppLock ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-gold-500 hover:bg-gold-400 text-navy-900 shadow-lg'}`}
+            >
+              {hasAppLock ? <><Unlock size={18} /> Remove App Lock</> : <><Lock size={18} /> Set App Lock</>}
+            </button>
+          </div>
+
           <div className="glass p-5 md:p-6 rounded-2xl border border-rose-200 dark:border-rose-500/20">
             <h3 className="text-lg font-semibold mb-2 text-rose-600 dark:text-rose-400">Account Access</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Log out of your current session. You can choose to keep your data locally or wipe it clean.</p>
@@ -196,6 +250,63 @@ export function ProfilePage() {
                  Cancel
                </button>
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lock Settings Modal */}
+      {isLockModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-navy-900/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsLockModalOpen(false)}></div>
+          
+          <div className="relative w-full max-w-md glass rounded-3xl p-6 md:p-8 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 text-center">
+             <div className="flex justify-end absolute right-4 top-4">
+               <button onClick={() => setIsLockModalOpen(false)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white"><X size={20} /></button>
+             </div>
+             <div className="w-16 h-16 bg-gold-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-gold-500">
+               {hasAppLock ? <Unlock size={32} /> : <Lock size={32} />}
+             </div>
+             
+             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+               {lockStep === 'remove' ? 'Remove App Lock' : (lockStep === 'confirm' ? 'Confirm Password' : 'Set App Lock')}
+             </h3>
+             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+               {lockStep === 'remove' 
+                 ? 'Enter your current password or PIN to remove the lock.' 
+                 : (lockStep === 'confirm' ? 'Please re-enter your password to confirm.' : 'Enter a new password or PIN to secure PayTrix.')}
+             </p>
+             
+             <form onSubmit={handleLockSubmit} className="space-y-4 text-left">
+               {lockStep === 'confirm' ? (
+                 <div>
+                   <input 
+                     type="password"
+                     value={lockConfirm}
+                     onChange={(e) => setLockConfirm(e.target.value)}
+                     className="w-full bg-white dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 transition-all text-gray-900 dark:text-white text-center tracking-widest text-lg"
+                     autoFocus
+                     required
+                   />
+                 </div>
+               ) : (
+                 <div>
+                   <input 
+                     type="password"
+                     value={lockInput}
+                     onChange={(e) => setLockInput(e.target.value)}
+                     className="w-full bg-white dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 transition-all text-gray-900 dark:text-white text-center tracking-widest text-lg"
+                     autoFocus
+                     required
+                   />
+                 </div>
+               )}
+               <button 
+                 type="submit"
+                 className="w-full py-3.5 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-xl transition-all shadow-lg"
+               >
+                 {lockStep === 'remove' ? 'Remove Lock' : (lockStep === 'confirm' ? 'Confirm & Set Lock' : 'Continue')}
+               </button>
+             </form>
           </div>
         </div>
       )}

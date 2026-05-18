@@ -13,7 +13,8 @@ const initialState = {
     isSetup: false,
     selectedPeriod: 'this-month', // 'this-month', 'last-month', 'this-week', 'all-time', 'custom'
     customStartDate: '',
-    customEndDate: ''
+    customEndDate: '',
+    appLock: null
   }
 };
 
@@ -70,7 +71,15 @@ function financeReducer(state, action) {
     case 'DELETE_ACCOUNT':
       return { ...state, accounts: (state.accounts || []).filter(a => a.id !== action.payload) };
     case 'UPDATE_PROFILE':
-      return { ...state, settings: { ...state.settings, userName: action.payload.name, currency: action.payload.currency } };
+      return { 
+        ...state, 
+        settings: { 
+          ...state.settings, 
+          userName: action.payload.name !== undefined ? action.payload.name : state.settings.userName, 
+          currency: action.payload.currency !== undefined ? action.payload.currency : state.settings.currency,
+          appLock: action.payload.appLock !== undefined ? action.payload.appLock : state.settings.appLock
+        } 
+      };
     case 'LOGOUT':
       return { ...state, settings: { ...state.settings, isSetup: false } };
     case 'RESET_APP':

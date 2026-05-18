@@ -13,6 +13,7 @@ import { Onboarding } from './components/Onboarding';
 import { AccountsPage } from './components/AccountsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { SplashScreen } from './components/SplashScreen';
+import { LockScreen } from './components/LockScreen';
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 
 function App() {
@@ -24,6 +25,8 @@ function App() {
   const [showSplash, setShowSplash] = useState(() => {
     return !sessionStorage.getItem('paytrix_splash_shown');
   });
+
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   const handleSplashDone = useCallback(() => {
     sessionStorage.setItem('paytrix_splash_shown', '1');
@@ -49,6 +52,11 @@ function App() {
   // Show splash screen on initial load (over onboarding or main app)
   if (showSplash) {
     return <SplashScreen onDone={handleSplashDone} />;
+  }
+
+  // Show Lock Screen if app lock is enabled and not unlocked
+  if (state.settings.appLock && !isUnlocked) {
+    return <LockScreen onUnlock={() => setIsUnlocked(true)} />;
   }
 
   if (!state.settings.isSetup) {

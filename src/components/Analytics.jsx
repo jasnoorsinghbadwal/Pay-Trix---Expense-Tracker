@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Sparkles } from 'lucide-react';
 import { CATEGORIES } from '../utils/constants';
 import { isTransactionInPeriod, getPeriodDates, parseLocalDate } from '../utils/dateFilters';
 import { Forecaster } from './Forecaster';
@@ -122,7 +123,8 @@ export function Analytics() {
       return {
         name: cat ? cat.label : 'Other',
         value: totals[catId],
-        color: cat ? cat.color : '#6B7280'
+        color: cat ? cat.color : '#6B7280',
+        icon: cat ? cat.icon : Sparkles
       };
     }).sort((a, b) => b.value - a.value);
 
@@ -188,50 +190,75 @@ export function Analytics() {
           {/* Expenses Breakdown Pie Chart */}
           <div className="glass p-5 md:p-6 rounded-2xl h-[350px] md:h-[400px] flex flex-col relative">
             <h3 className="text-base md:text-lg font-semibold tracking-wide mb-4 md:mb-6 text-gray-900 dark:text-white truncate">Expense Breakdown ({periodLabel})</h3>
-            <div className="flex-1 w-full relative">
+            <div className="flex-1 min-h-0">
               {pieData.data.length === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                   <p className="text-sm md:text-base">No expenses in this period</p>
                 </div>
               ) : (
-                <>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData.data}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {pieData.data.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                         trigger={isMobile ? "click" : "hover"}
-                         wrapperStyle={{ pointerEvents: 'none' }}
-                         contentStyle={{ backgroundColor: isDark ? '#121212' : '#ffffff', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', color: isDark ? '#fff' : '#000' }}
-                         itemStyle={{ color: isDark ? '#fff' : '#000', fontFamily: 'JetBrains Mono' }}
-                         formatter={(value) => [`${currency}${value.toLocaleString()}`, '']}
-                      />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Center Text for Donut */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
-                     <span className="text-[10px] md:text-sm text-gray-500 dark:text-gray-400">Total Spent</span>
-                     <span className="text-lg md:text-2xl font-mono font-bold text-gray-900 dark:text-white">{currency}{pieData.totalSpent.toLocaleString()}</span>
+                <div className="flex flex-col sm:flex-row items-center gap-6 h-full min-h-0">
+                  {/* Donut Chart Container */}
+                  <div className="relative w-full sm:w-[45%] h-[160px] sm:h-[220px] flex-shrink-0 flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData.data}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={75}
+                          paddingAngle={4}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {pieData.data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                           trigger={isMobile ? "click" : "hover"}
+                           wrapperStyle={{ pointerEvents: 'none' }}
+                           contentStyle={{ backgroundColor: isDark ? '#121212' : '#ffffff', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', color: isDark ? '#fff' : '#000' }}
+                           itemStyle={{ color: isDark ? '#fff' : '#000', fontFamily: 'JetBrains Mono' }}
+                           formatter={(value) => [`${currency}${value.toLocaleString()}`, '']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    {/* Center Text for Donut */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                       <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Spent</span>
+                       <span className="text-base sm:text-lg font-mono font-bold text-gray-900 dark:text-white mt-0.5">{currency}{pieData.totalSpent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    </div>
                   </div>
-                </>
+
+                  {/* Detailed Categories List */}
+                  <div className="flex-1 w-full overflow-y-auto max-h-[160px] sm:max-h-[220px] pr-1 space-y-3 custom-scrollbar">
+                    {pieData.data.map((entry, index) => {
+                      const pct = pieData.totalSpent > 0 ? ((entry.value / pieData.totalSpent) * 100).toFixed(1) : 0;
+                      const IconComponent = entry.icon || Sparkles;
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-medium">
+                              <span className="p-1 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center" style={{ color: entry.color }}>
+                                <IconComponent size={12} />
+                              </span>
+                              <span className="truncate max-w-[100px] sm:max-w-[120px]">{entry.name}</span>
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono font-bold">{pct}%</span>
+                            </div>
+                            <span className="font-mono font-bold text-gray-900 dark:text-white">{currency}{entry.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          {/* Visual Progress Bar */}
+                          <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: entry.color }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
-            {isMobile && pieData.data.length > 0 && (
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center mt-2">Tap segments to view values</p>
-            )}
           </div>
 
         </div>

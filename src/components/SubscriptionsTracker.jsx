@@ -75,7 +75,8 @@ export function SubscriptionsTracker() {
     }
 
     if (editData && editData.paidUntil && nextBillingDate < editData.paidUntil) {
-      toast.error(`Cannot select a billing date earlier than your last paid date (${editData.paidUntil})`);
+      alert('Bill Already Paid for this date/cycle.');
+      toast.error(`Bill Already Paid for this date/cycle.`);
       return;
     }
 
@@ -165,6 +166,20 @@ export function SubscriptionsTracker() {
     const diffTime = target - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  };
+
+  const getAccountBalance = (accountId) => {
+    const account = state.accounts.find(a => a.id === accountId);
+    if (!account) return 0;
+    
+    let balance = account.initialBalance;
+    state.transactions.forEach(t => {
+      if (t.accountId === accountId) {
+        if (t.type === 'income') balance += t.amount;
+        else balance -= t.amount;
+      }
+    });
+    return balance;
   };
 
   return (
@@ -330,7 +345,16 @@ export function SubscriptionsTracker() {
                   <input 
                     type="date" 
                     value={nextBillingDate} 
-                    onChange={(e) => setNextBillingDate(e.target.value)} 
+                    onChange={(e) => {
+                      const selectedVal = e.target.value;
+                      if (editData && editData.paidUntil && selectedVal && selectedVal < editData.paidUntil) {
+                        alert('Bill Already Paid for this date/cycle.');
+                        // Revert
+                        setNextBillingDate(editData.nextBillingDate || '');
+                        return;
+                      }
+                      setNextBillingDate(selectedVal);
+                    }} 
                     min={editData && editData.paidUntil ? editData.paidUntil : ''}
                     className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white" 
                     required 
@@ -384,9 +408,12 @@ export function SubscriptionsTracker() {
                   onChange={(e) => setPayAccountId(e.target.value)} 
                   className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white font-medium"
                 >
-                  {(state.accounts || []).map(a => (
-                    <option key={a.id} value={a.id}>{a.name} ({currency}{a.initialBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })})</option>
-                  ))}
+                  {(state.accounts || []).map(a => {
+                    const latestBalance = getAccountBalance(a.id);
+                    return (
+                      <option key={a.id} value={a.id}>{a.name} ({currency}{latestBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })})</option>
+                    );
+                  })}
                 </select>
               </div>
 

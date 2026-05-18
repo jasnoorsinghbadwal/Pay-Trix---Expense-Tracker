@@ -63,13 +63,18 @@ export function TransactionsPage() {
           {filteredTransactions.map(t => {
             const cat = getCategory(t.category);
             const Icon = cat.icon;
+            const acc = state.accounts?.find(a => a.id === t.accountId);
+            const accName = acc ? acc.name : 'Unknown Wallet';
             return (
               <div key={t.id} className="grid grid-cols-12 gap-4 p-3 items-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group">
                  <div className="col-span-4 flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-white dark:bg-charcoal-800 shadow-sm dark:shadow-none" style={{ color: cat.color }}>
                       <Icon size={18} />
                    </div>
-                   <p className="font-medium text-gray-900 dark:text-white group-hover:text-gold-500 dark:group-hover:text-gold-400 transition-colors truncate">{t.title}</p>
+                   <div className="min-w-0">
+                     <p className="font-medium text-gray-900 dark:text-white group-hover:text-gold-500 dark:group-hover:text-gold-400 transition-colors truncate">{t.title}</p>
+                     <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded border border-gray-200 dark:border-white/5 mt-0.5 inline-block">{accName}</span>
+                   </div>
                  </div>
                  <div className="col-span-3 flex items-center">
                    <span className="px-3 py-1 rounded-full bg-gray-200 dark:bg-white/5 text-xs text-gray-600 dark:text-gray-300 capitalize border border-gray-300 dark:border-white/5 truncate">{cat.label}</span>
@@ -116,6 +121,8 @@ export function TransactionsPage() {
         {filteredTransactions.map(t => {
           const cat = getCategory(t.category);
           const Icon = cat.icon;
+          const acc = state.accounts?.find(a => a.id === t.accountId);
+          const accName = acc ? acc.name : 'Unknown Wallet';
           return (
             <div key={t.id} className="glass p-4 rounded-2xl">
               <div className="flex items-center justify-between gap-3">
@@ -125,10 +132,12 @@ export function TransactionsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-gray-900 dark:text-white truncate text-sm">{t.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                       <span className="text-xs text-gray-500 dark:text-gray-400">{t.date}</span>
                       <span className="text-gray-300 dark:text-gray-600">·</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{cat.label}</span>
+                      <span className="text-gray-300 dark:text-gray-600">·</span>
+                      <span className="text-[10px] text-gold-600 dark:text-gold-400 font-semibold bg-gold-500/10 dark:bg-gold-500/20 px-1.5 py-0.2 rounded border border-gold-500/20">{accName}</span>
                     </div>
                   </div>
                 </div>

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
-import { Target, AlertCircle, Plus, X, Building2, Trash2, Calendar, Award } from 'lucide-react';
+import { Target, AlertCircle, Plus, X, Trash2, Calendar, Award, History, Timer } from 'lucide-react';
 import { CATEGORIES, getCategory } from '../utils/constants';
-import { getBudgetStatus } from '../utils/dateFilters';
+import { getBudgetStatus, parseLocalDate, getPeriodDates } from '../utils/dateFilters';
 import toast from 'react-hot-toast';
 
 export function BudgetPlanner() {
@@ -12,29 +12,83 @@ export function BudgetPlanner() {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedCat, setSelectedCat] = useState('');
   const [budgetAmount, setBudgetAmount] = useState('');
-  const [selectedAccount, setSelectedAccount] = useState('');
   const [budgetPeriod, setBudgetPeriod] = useState('monthly');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState('');
+  const [activeTab, setActiveTab] = useState('active'); // 'active', 'future', 'history'
 
-  const budgetsWithSpending = useMemo(() => {
-    return (state.budgets || [])
-      .filter(b => !b.dismissed)
-      .map(b => {
-        const catInfo = getCategory(b.category);
-        const linkedAccount = state.accounts?.find(a => a.id === b.accountId);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const selectedPeriod = state.settings.selectedPeriod;
+  const customStartDate = state.settings.customStartDate;
+  const customEndDate = state.settings.customEndDate;
+  const { start: globalStart, end: globalEnd } = getPeriodDates(selectedPeriod, customStartDate, customEndDate);
+
+  // Compute lifetime savings across ended & dismissed budgets
+  const dismissedBudgetsSavings = useMemo(() => {
+    let netSavings = 0;
+    (state.budgets || []).forEach(b => {
+      if (b.dismissed) {
         const status = getBudgetStatus(b, state.transactions);
+        if (status.hasEnded) {
+          netSavings += (b.amount - status.spent); // positive if saved, negative if exceeded
+        }
+      }
+    });
+    return netSavings;
+  }, [state.budgets, state.transactions]);
 
-        return {
-          ...b,
-          label: catInfo.label,
-          icon: catInfo.icon,
-          color: catInfo.color,
-          linkedAccount,
-          ...status
-        };
-      });
-  }, [state.budgets, state.transactions, state.accounts]);
+  // Compute all budgets with status and future flag
+  const budgetsWithStatus = useMemo(() => {
+    return (state.budgets || []).map(b => {
+      const catInfo = getCategory(b.category);
+      const status = getBudgetStatus(b, state.transactions);
+      
+      const bStart = b.startDate ? parseLocalDate(b.startDate) : today;
+      const bStartZero = new Date(bStart.getFullYear(), bStart.getMonth(), bStart.getDate());
+      const isFuture = bStartZero > today;
+
+      return {
+        ...b,
+        label: catInfo.label,
+        icon: catInfo.icon,
+        color: catInfo.color,
+        isFuture,
+        ...status
+      };
+    });
+  }, [state.budgets, state.transactions, today]);
+
+  // Split into tabs and respect global period filtering (for Active and History)
+  const activeBudgets = useMemo(() => {
+    return budgetsWithStatus.filter(b => {
+      if (b.dismissed || b.isFuture) return false;
+      
+      // Filter active budgets overlapping with selected period
+      if (b.period === 'ongoing') return true;
+      const bStart = new Date(b.startDate);
+      const bEnd = new Date(b.endDate);
+      return bStart <= globalEnd && bEnd >= globalStart;
+    });
+  }, [budgetsWithStatus, globalStart, globalEnd]);
+
+  const futureBudgets = useMemo(() => {
+    // Show all planned future budgets so users can see upcoming limits
+    return budgetsWithStatus.filter(b => !b.dismissed && b.isFuture);
+  }, [budgetsWithStatus]);
+
+  const historyBudgets = useMemo(() => {
+    return budgetsWithStatus.filter(b => {
+      if (!b.dismissed) return false;
+      
+      // Filter dismissed/past records by the global period
+      if (b.period === 'ongoing') return true;
+      const bStart = new Date(b.startDate);
+      const bEnd = new Date(b.endDate);
+      return bStart <= globalEnd && bEnd >= globalStart;
+    });
+  }, [budgetsWithStatus, globalStart, globalEnd]);
 
   const handleSaveBudget = (e) => {
     e.preventDefault();
@@ -52,7 +106,7 @@ export function BudgetPlanner() {
       id: `budget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       category: selectedCat,
       amount: parseFloat(budgetAmount),
-      accountId: selectedAccount || (state.accounts?.[0]?.id || ''),
+      accountId: '', // Funding Account is removed from form and is category-wide
       period: budgetPeriod,
       startDate: budgetPeriod !== 'ongoing' ? startDate : '',
       endDate: budgetPeriod === 'custom' ? endDate : '',
@@ -70,30 +124,48 @@ export function BudgetPlanner() {
     setSelectedCat('');
   };
 
-  const openAddForm = () => {
-    if (state.accounts?.length === 0) {
-      toast.error('Please create an Account first!');
-      return;
-    }
-    setSelectedAccount(state.accounts[0].id);
-    setIsAdding(true);
+  const getFutureDaysLeft = (startDateStr) => {
+    const start = parseLocalDate(startDateStr);
+    const diffTime = start.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) return 'Starts tomorrow';
+    if (diffDays > 1) return `Starts in ${diffDays} days`;
+    return 'Starts soon';
   };
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-4">
-      <div className="glass p-5 md:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg md:text-xl font-semibold mb-1 text-gray-900 dark:text-white">Budgets & Limiters</h2>
-          <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm">Track your spending limits dynamically with flexible periods</p>
+      
+      {/* Metrics Banner & Header */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="lg:col-span-2 glass p-5 md:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg md:text-xl font-semibold mb-1 text-gray-900 dark:text-white">Budgets & Limiters</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm">Track your spending limits dynamically with flexible periods</p>
+          </div>
+          {!isAdding && (
+            <button 
+              onClick={() => setIsAdding(true)}
+              className="w-full sm:w-auto px-4 py-2.5 bg-gold-500 hover:bg-gold-400 text-navy-900 rounded-xl font-bold transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-gold-500/20 shrink-0"
+            >
+              <Plus size={16} /> Add Budget
+            </button>
+          )}
         </div>
-        {!isAdding && (
-          <button 
-            onClick={openAddForm}
-            className="w-full sm:w-auto px-4 py-2.5 bg-gold-500 hover:bg-gold-400 text-navy-900 rounded-xl font-bold transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-gold-500/20"
-          >
-            <Plus size={16} /> Add Budget
-          </button>
-        )}
+
+        {/* Dynamic Lifetime savings/exceeded metrics banner */}
+        <div className="glass p-5 rounded-2xl bg-gradient-to-tr from-navy-950 via-charcoal-900 to-navy-900 border border-gold-500/10 flex items-center justify-between group hover:-translate-y-0.5 transition-transform">
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">Lifetime Budget Net Savings</p>
+            <h3 className={`text-2xl font-bold font-mono mt-1 truncate ${dismissedBudgetsSavings >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {dismissedBudgetsSavings >= 0 ? '+' : '-'}{currency}{Math.abs(dismissedBudgetsSavings).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </h3>
+            <p className="text-[9px] text-gray-500 mt-1 truncate">Updates dynamically when ended budgets are dismissed.</p>
+          </div>
+          <div className={`p-3 rounded-xl shrink-0 ${dismissedBudgetsSavings >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+            <Award size={24} />
+          </div>
+        </div>
       </div>
 
       {isAdding && (
@@ -119,18 +191,6 @@ export function BudgetPlanner() {
                  </select>
                </div>
                <div>
-                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Funding Account</label>
-                 <select 
-                   value={selectedAccount} 
-                   onChange={(e) => setSelectedAccount(e.target.value)}
-                   className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-3 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white appearance-none font-medium"
-                 >
-                   {state.accounts.map(a => (
-                     <option key={a.id} value={a.id}>{a.name}</option>
-                   ))}
-                 </select>
-               </div>
-               <div>
                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Budget Period</label>
                  <select 
                    value={budgetPeriod} 
@@ -143,9 +203,22 @@ export function BudgetPlanner() {
                    <option value="ongoing">Ongoing (No Limit)</option>
                  </select>
                </div>
+               <div>
+                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Limit ({currency})</label>
+                 <input 
+                   type="number"
+                   step="0.01"
+                   min="0.1"
+                   value={budgetAmount}
+                   onChange={(e) => setBudgetAmount(e.target.value)}
+                   placeholder="0.00"
+                   className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-3 focus:border-gold-500/50 outline-none text-sm font-mono text-gray-900 dark:text-white"
+                   required
+                 />
+               </div>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                {budgetPeriod !== 'ongoing' && (
                  <div>
                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Start Date</label>
@@ -171,20 +244,6 @@ export function BudgetPlanner() {
                    />
                  </div>
                )}
-
-               <div>
-                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Limit ({currency})</label>
-                 <input 
-                   type="number"
-                   step="0.01"
-                   min="0.1"
-                   value={budgetAmount}
-                   onChange={(e) => setBudgetAmount(e.target.value)}
-                   placeholder="0.00"
-                   className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-3 focus:border-gold-500/50 outline-none text-sm font-mono text-gray-900 dark:text-white"
-                   required
-                 />
-               </div>
              </div>
 
              <div className="flex justify-end gap-2 pt-2">
@@ -206,168 +265,319 @@ export function BudgetPlanner() {
         </div>
       )}
 
-      {budgetsWithSpending.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 md:h-64 text-gray-500 glass rounded-2xl p-6 text-center">
-           <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
-             <Target size={24} className="text-gray-400" />
-           </div>
-           <p className="text-base md:text-lg text-gray-900 dark:text-white font-medium">No active budgets set</p>
-           <p className="text-xs md:text-sm mt-1 text-gray-500 dark:text-gray-400">Click "Add Budget" to start tracking limits dynamically.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {budgetsWithSpending.map(cat => {
-            const Icon = cat.icon;
+      {/* Tabs Navigation */}
+      <div className="flex border-b border-gray-200 dark:border-white/5 shrink-0">
+        <button 
+          onClick={() => setActiveTab('active')} 
+          className={`flex items-center gap-2 pb-3 px-4 text-sm font-semibold border-b-2 transition-all ${activeTab === 'active' ? 'border-gold-500 text-gold-500' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}
+        >
+          <Target size={16} /> Active Budgets ({activeBudgets.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('future')} 
+          className={`flex items-center gap-2 pb-3 px-4 text-sm font-semibold border-b-2 transition-all ${activeTab === 'future' ? 'border-gold-500 text-gold-500' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}
+        >
+          <Timer size={16} /> Future Budgets ({futureBudgets.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('history')} 
+          className={`flex items-center gap-2 pb-3 px-4 text-sm font-semibold border-b-2 transition-all ${activeTab === 'history' ? 'border-gold-500 text-gold-500' : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}
+        >
+          <History size={16} /> History Log ({historyBudgets.length})
+        </button>
+      </div>
 
-            // Render special Expiry Notification Card if ended
-            if (cat.hasEnded) {
-              return (
-                <div key={cat.id} className="glass p-5 md:p-6 rounded-2xl border border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/2 transition-colors relative flex flex-col justify-between h-full">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-charcoal-800 flex items-center justify-center shadow-sm dark:shadow-none shrink-0" style={{ color: cat.color }}>
-                        <Icon size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">{cat.label} Budget</h3>
-                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded font-medium mt-0.5 capitalize">
-                          <Calendar size={10} /> ended ({cat.period})
-                        </span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this budget completely?')) {
-                          dispatch({ type: 'DELETE_BUDGET', payload: cat.id });
-                          toast.success('Budget deleted');
-                        }
-                      }}
-                      className="text-gray-400 hover:text-rose-500 transition-colors p-1"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+      {/* Tab Panels */}
+      
+      {/* 1. Active Tab */}
+      {activeTab === 'active' && (
+        activeBudgets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 md:h-64 text-gray-500 glass rounded-2xl p-6 text-center">
+             <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+               <Target size={24} className="text-gray-400" />
+             </div>
+             <p className="text-base md:text-lg text-gray-900 dark:text-white font-medium">No active budgets for this period</p>
+             <p className="text-xs md:text-sm mt-1 text-gray-500 dark:text-gray-400">Click "Add Budget" to start tracking limits dynamically.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {activeBudgets.map(cat => {
+              const Icon = cat.icon;
 
-                  <div className="my-4 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5">
-                    {cat.saved >= 0 ? (
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                          <Award size={14} /> Saved Successfully!
-                        </p>
-                        <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
-                          Awesome job! You saved <span className="font-semibold">{currency}{cat.saved.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> of your limit.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                          <AlertCircle size={14} /> Over Budget!
-                        </p>
-                        <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
-                          Limit exceeded by <span className="font-semibold">{currency}{Math.abs(cat.saved).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> (spent {currency}{cat.spent.toLocaleString()} of {currency}{cat.amount}).
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      dispatch({ type: 'DISMISS_BUDGET', payload: cat.id });
-                      toast.success('Budget result dismissed');
-                    }}
-                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-navy-900 font-bold rounded-xl text-xs transition-colors shadow-md"
-                  >
-                    Okay, Dismiss
-                  </button>
-                </div>
-              );
-            }
-
-            // Normal active budget card
-            const percentage = cat.percentage;
-            let colorClass = 'bg-emerald-500';
-            let textColor = 'text-emerald-600 dark:text-emerald-400';
-            if (percentage >= 70 && percentage <= 90) {
-               colorClass = 'bg-amber-500';
-               textColor = 'text-amber-600 dark:text-amber-400';
-            } else if (percentage > 90) {
-               colorClass = 'bg-rose-500';
-               textColor = 'text-rose-600 dark:text-rose-400';
-            }
-
-            const isOverBudget = percentage > 100;
-
-            return (
-              <div key={cat.id} className="glass p-5 md:p-6 rounded-2xl hover:border-gray-300 dark:hover:border-white/20 transition-colors group relative flex flex-col justify-between h-full">
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-charcoal-800 flex items-center justify-center shadow-sm dark:shadow-none shrink-0" style={{ color: cat.color }}>
-                        <Icon size={20} />
-                      </div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">{cat.label}</h3>
-                          {cat.linkedAccount && (
-                            <span className="flex items-center gap-1 text-[9px] bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">
-                              <Building2 size={8} /> {cat.linkedAccount.name}
-                            </span>
-                          )}
+              // Render special Expiry Notification Card if ended
+              if (cat.hasEnded) {
+                return (
+                  <div key={cat.id} className="glass p-5 md:p-6 rounded-2xl border border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/2 transition-all relative flex flex-col justify-between h-full shadow-lg">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-charcoal-800 flex items-center justify-center shadow-sm dark:shadow-none shrink-0" style={{ color: cat.color }}>
+                          <Icon size={20} />
                         </div>
-                        <span className="inline-flex items-center gap-1 text-[9px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/5 px-1.5 py-0.5 rounded font-medium mt-1 capitalize">
-                          <Calendar size={8} /> {cat.period}
-                        </span>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">{cat.label} Budget</h3>
+                          <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded font-medium mt-0.5 capitalize">
+                            <Calendar size={10} /> ended ({cat.period})
+                          </span>
+                        </div>
                       </div>
+                      <button 
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this budget completely?')) {
+                            dispatch({ type: 'DELETE_BUDGET', payload: cat.id });
+                            toast.success('Budget deleted');
+                          }
+                        }}
+                        className="text-gray-400 hover:text-rose-500 transition-colors p-1"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this budget completely?')) {
-                          dispatch({ type: 'DELETE_BUDGET', payload: cat.id });
-                          toast.success('Budget deleted');
-                        }
-                      }}
-                      className="text-gray-400 hover:text-rose-500 transition-colors p-1"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
 
-                  <div className="flex justify-between items-end mb-3">
-                    <div>
-                      {isOverBudget && (
-                        <span className="flex items-center gap-1 text-[10px] md:text-xs text-rose-600 dark:text-rose-400 font-medium">
-                          <AlertCircle size={10} className="md:w-3 md:h-3" /> Limit Exceeded
-                        </span>
+                    <div className="my-4 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5">
+                      {cat.saved >= 0 ? (
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <Award size={14} /> Saved Successfully!
+                          </p>
+                          <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                            Awesome job! You saved <span className="font-semibold">{currency}{cat.saved.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> of your limit.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                            <AlertCircle size={14} /> Over Budget!
+                          </p>
+                          <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                            Limit exceeded by <span className="font-semibold">{currency}{Math.abs(cat.saved).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> (spent {currency}{cat.spent.toLocaleString()} of {currency}{cat.amount}).
+                          </p>
+                        </div>
                       )}
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono text-base md:text-lg font-bold text-gray-900 dark:text-white">{currency}{cat.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-                      <div className="text-[10px] md:text-xs text-gray-500">of {currency}{cat.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+
+                    <button
+                      onClick={() => {
+                        dispatch({ type: 'DISMISS_BUDGET', payload: cat.id });
+                        toast.success('Budget result dismissed & recorded in Lifetime Savings!');
+                      }}
+                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-navy-900 font-bold rounded-xl text-xs transition-colors shadow-md flex items-center justify-center gap-2"
+                    >
+                      Okay, Dismiss
+                    </button>
+                  </div>
+                );
+              }
+
+              // Normal active budget card
+              const percentage = cat.percentage;
+              let colorClass = 'bg-emerald-500';
+              let textColor = 'text-emerald-600 dark:text-emerald-400';
+              if (percentage >= 70 && percentage <= 90) {
+                 colorClass = 'bg-amber-500';
+                 textColor = 'text-amber-600 dark:text-amber-400';
+              } else if (percentage > 90) {
+                 colorClass = 'bg-rose-500';
+                 textColor = 'text-rose-600 dark:text-rose-400';
+              }
+
+              const isOverBudget = percentage > 100;
+
+              return (
+                <div key={cat.id} className="glass p-5 md:p-6 rounded-2xl hover:border-gray-300 dark:hover:border-white/20 transition-colors group relative flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-charcoal-800 flex items-center justify-center shadow-sm dark:shadow-none shrink-0" style={{ color: cat.color }}>
+                          <Icon size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">{cat.label}</h3>
+                          <span className="inline-flex items-center gap-1 text-[9px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/5 px-1.5 py-0.5 rounded font-medium mt-1 capitalize">
+                            <Calendar size={8} /> {cat.period}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this budget completely?')) {
+                            dispatch({ type: 'DELETE_BUDGET', payload: cat.id });
+                            toast.success('Budget deleted');
+                          }
+                        }}
+                        className="text-gray-400 hover:text-rose-500 transition-colors p-1"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-end mb-3">
+                      <div>
+                        {isOverBudget && (
+                          <span className="flex items-center gap-1 text-[10px] md:text-xs text-rose-600 dark:text-rose-400 font-medium">
+                            <AlertCircle size={10} className="md:w-3 md:h-3" /> Limit Exceeded
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-base md:text-lg font-bold text-gray-900 dark:text-white">{currency}{cat.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                        <div className="text-[10px] md:text-xs text-gray-500">of {currency}{cat.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="h-2.5 md:h-3 w-full bg-gray-200 dark:bg-charcoal-900 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/5">
+                       <div 
+                         className={`h-full ${colorClass} transition-all duration-1000 ease-out relative`}
+                         style={{ width: `${Math.min(percentage, 100)}%` }}
+                       >
+                         <div className="absolute inset-0 bg-white/20"></div>
+                       </div>
+                    </div>
+                    <div className="mt-2 md:mt-3 flex justify-between text-[10px] md:text-xs font-medium">
+                       <span className="text-gray-500 dark:text-gray-400">{percentage.toFixed(1)}% used</span>
+                       <span className={textColor}>
+                         {isOverBudget ? `Exceeded by ${currency}${(cat.spent - cat.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `${currency}${(cat.amount - cat.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })} left`}
+                       </span>
                     </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        )
+      )}
 
-                <div>
-                  <div className="h-2.5 md:h-3 w-full bg-gray-200 dark:bg-charcoal-900 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/5">
-                     <div 
-                       className={`h-full ${colorClass} transition-all duration-1000 ease-out relative`}
-                       style={{ width: `${Math.min(percentage, 100)}%` }}
-                     >
-                       <div className="absolute inset-0 bg-white/20"></div>
-                     </div>
+      {/* 2. Future Tab */}
+      {activeTab === 'future' && (
+        futureBudgets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 md:h-64 text-gray-500 glass rounded-2xl p-6 text-center">
+             <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+               <Timer size={24} className="text-gray-400" />
+             </div>
+             <p className="text-base md:text-lg text-gray-900 dark:text-white font-medium">No future/upcoming budgets scheduled</p>
+             <p className="text-xs md:text-sm mt-1 text-gray-500 dark:text-gray-400">Budgets with start dates in the future will appear here automatically.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {futureBudgets.map(cat => {
+              const Icon = cat.icon;
+              return (
+                <div key={cat.id} className="glass p-5 rounded-2xl border border-gray-250 dark:border-white/5 flex flex-col justify-between h-full relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-gold-500 to-amber-300"></div>
+                  
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-charcoal-800 flex items-center justify-center shrink-0 text-gold-500" style={{ color: cat.color }}>
+                          <Icon size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">{cat.label}</h3>
+                          <span className="inline-flex items-center gap-1 text-[10px] text-gold-600 dark:text-gold-400 bg-gold-500/10 px-2 py-0.5 rounded font-bold mt-1">
+                            {getFutureDaysLeft(cat.startDate)}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this planned budget?')) {
+                            dispatch({ type: 'DELETE_BUDGET', payload: cat.id });
+                            toast.success('Upcoming budget deleted');
+                          }
+                        }}
+                        className="text-gray-400 hover:text-rose-500 transition-colors p-1"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-gray-50 dark:bg-charcoal-900/50 p-3 rounded-xl border border-gray-200/50 dark:border-white/5 mt-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Allocated Budget Limit:</span>
+                      <span className="font-mono text-sm font-bold text-gray-900 dark:text-white">{currency}{cat.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    </div>
                   </div>
-                  <div className="mt-2 md:mt-3 flex justify-between text-[10px] md:text-xs font-medium">
-                     <span className="text-gray-500 dark:text-gray-400">{percentage.toFixed(1)}% used</span>
-                     <span className={textColor}>
-                       {isOverBudget ? `Exceeded by ${currency}${(cat.spent - cat.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `${currency}${(cat.amount - cat.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })} left`}
-                     </span>
+
+                  <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/5 text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1 justify-center">
+                    <Calendar size={12} /> Starts: {new Date(cat.startDate).toLocaleDateString()}
+                    {cat.endDate && ` - Ends: ${new Date(cat.endDate).toLocaleDateString()}`}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       )}
+
+      {/* 3. History Tab */}
+      {activeTab === 'history' && (
+        historyBudgets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 md:h-64 text-gray-500 glass rounded-2xl p-6 text-center">
+             <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+               <History size={24} className="text-gray-400" />
+             </div>
+             <p className="text-base md:text-lg text-gray-900 dark:text-white font-medium">No dismissed budgets record in this period</p>
+             <p className="text-xs md:text-sm mt-1 text-gray-500 dark:text-gray-400">All your closed and completed budgets are preserved permanently here.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {historyBudgets.map(cat => {
+              const Icon = cat.icon;
+              const isSaved = cat.saved >= 0;
+              return (
+                <div key={cat.id} className="glass p-5 rounded-2xl border border-gray-250 dark:border-white/5 relative flex flex-col justify-between h-full opacity-80 hover:opacity-100 transition-opacity">
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-white dark:bg-charcoal-800 flex items-center justify-center shrink-0" style={{ color: cat.color }}>
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{cat.label} Budget</h3>
+                          <span className="inline-flex items-center gap-1 text-[9px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/5 px-1.5 py-0.5 rounded font-medium mt-0.5 capitalize">
+                            <Calendar size={8} /> ended ({cat.period})
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this historical record?')) {
+                            dispatch({ type: 'DELETE_BUDGET', payload: cat.id });
+                            toast.success('Record deleted');
+                          }
+                        }}
+                        className="text-gray-400 hover:text-rose-500 transition-colors p-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    <div className="my-2.5 p-3 rounded-xl bg-gray-50 dark:bg-charcoal-900/50 border border-gray-200 dark:border-white/5">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium">Final Spent:</span>
+                        <span className="font-mono font-semibold text-gray-900 dark:text-white">{currency}{cat.spent.toLocaleString()} / {currency}{cat.amount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs mt-2 pt-2 border-t border-gray-200 dark:border-white/5">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium">Final Result:</span>
+                        <span className={`font-semibold flex items-center gap-1 ${isSaved ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                          {isSaved ? <Award size={12} /> : <AlertCircle size={12} />}
+                          {isSaved ? 'Saved' : 'Exceeded'} {currency}{Math.abs(cat.saved).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-[9px] text-gray-400 dark:text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
+                    <Calendar size={10} /> Duration: {new Date(cat.startDate).toLocaleDateString()}
+                    {cat.endDate && ` - ${new Date(cat.endDate).toLocaleDateString()}`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      )}
+
     </div>
   );
 }

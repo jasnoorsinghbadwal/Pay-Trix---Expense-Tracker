@@ -172,6 +172,8 @@ export function Dashboard() {
                     recentTransactions.map(t => {
                       const cat = getCategory(t.category);
                       const Icon = cat.icon;
+                      const acc = state.accounts?.find(a => a.id === t.accountId);
+                      const accName = acc ? acc.name : 'Unknown Wallet';
                       return (
                         <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer group">
                            <div className="flex items-center gap-3 md:gap-4">
@@ -180,7 +182,11 @@ export function Dashboard() {
                               </div>
                               <div className="min-w-0">
                                  <p className="font-medium text-gray-900 dark:text-white group-hover:text-gold-500 dark:group-hover:text-gold-400 transition-colors truncate">{t.title}</p>
-                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.date}</p>
+                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1.5">
+                                   <span>{t.date}</span>
+                                   <span className="text-gray-300 dark:text-gray-600">·</span>
+                                   <span className="text-[10px] bg-gold-500/10 dark:bg-gold-500/20 text-gold-600 dark:text-gold-400 px-1 py-0.2 rounded font-semibold">{accName}</span>
+                                 </p>
                               </div>
                            </div>
                            <span className={`font-mono font-medium shrink-0 ml-2 ${t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>

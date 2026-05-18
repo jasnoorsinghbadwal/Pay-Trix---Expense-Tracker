@@ -13,10 +13,14 @@ export function SubscriptionsTracker() {
   // Form State
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [accountId, setAccountId] = useState('');
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [nextBillingDate, setNextBillingDate] = useState('');
   const [category, setCategory] = useState('bills');
+
+  // Pay Confirmation Modal State
+  const [payModalOpen, setPayModalOpen] = useState(false);
+  const [selectedSubToPay, setSelectedSubToPay] = useState(null);
+  const [payAccountId, setPayAccountId] = useState('');
 
   // Compute Total Subscription Overhead
   const metrics = useMemo(() => {
@@ -43,7 +47,6 @@ export function SubscriptionsTracker() {
       setEditData(sub);
       setName(sub.name);
       setAmount(sub.amount);
-      setAccountId(sub.accountId || state.accounts[0]?.id || '');
       setBillingCycle(sub.billingCycle || 'monthly');
       setNextBillingDate(sub.nextBillingDate || '');
       setCategory(sub.category || 'bills');
@@ -51,7 +54,6 @@ export function SubscriptionsTracker() {
       setEditData(null);
       setName('');
       setAmount('');
-      setAccountId(state.accounts[0]?.id || '');
       setBillingCycle('monthly');
       const today = new Date().toISOString().split('T')[0];
       setNextBillingDate(today);
@@ -72,14 +74,19 @@ export function SubscriptionsTracker() {
       return;
     }
 
+    if (editData && editData.paidUntil && nextBillingDate < editData.paidUntil) {
+      toast.error(`Cannot select a billing date earlier than your last paid date (${editData.paidUntil})`);
+      return;
+    }
+
     const payload = {
       id: editData ? editData.id : `sub-${Date.now()}`,
       name,
       amount: parseFloat(amount),
-      accountId: accountId || state.accounts[0]?.id || '',
       billingCycle,
       nextBillingDate,
       category,
+      paidUntil: editData ? editData.paidUntil || '' : '',
       active: true
     };
 
@@ -100,37 +107,52 @@ export function SubscriptionsTracker() {
     }
   };
 
-  // Premium Quick Pay Functionality
-  const handleMarkAsPaid = (sub) => {
+  // Pay triggers
+  const startMarkAsPaid = (sub) => {
+    setSelectedSubToPay(sub);
+    setPayAccountId(state.accounts[0]?.id || '');
+    setPayModalOpen(true);
+  };
+
+  const confirmMarkAsPaid = () => {
+    if (!selectedSubToPay) return;
+    if (!payAccountId) {
+      toast.error('Please select a payment wallet');
+      return;
+    }
+
     // 1. Add Transaction to Ledger
     const transactionId = `txn-${Date.now()}`;
     const txnPayload = {
       id: transactionId,
-      title: `${sub.name} (Recurring)`,
-      amount: sub.amount,
+      title: `${selectedSubToPay.name} (Recurring)`,
+      amount: selectedSubToPay.amount,
       type: 'expense',
-      category: sub.category,
-      accountId: sub.accountId || state.accounts[0]?.id,
+      category: selectedSubToPay.category,
+      accountId: payAccountId,
       date: new Date().toISOString().split('T')[0],
       notes: `Automated subscription payment via PayTrix scheduler.`
     };
     dispatch({ type: 'ADD_TRANSACTION', payload: txnPayload });
 
     // 2. Roll Forward Next Billing Date
-    const currentBillingDate = new Date(sub.nextBillingDate);
-    if (sub.billingCycle === 'monthly') {
+    const currentBillingDate = new Date(selectedSubToPay.nextBillingDate);
+    if (selectedSubToPay.billingCycle === 'monthly') {
       currentBillingDate.setMonth(currentBillingDate.getMonth() + 1);
     } else {
       currentBillingDate.setFullYear(currentBillingDate.getFullYear() + 1);
     }
 
     const updatedSub = {
-      ...sub,
+      ...selectedSubToPay,
+      paidUntil: selectedSubToPay.nextBillingDate,
       nextBillingDate: currentBillingDate.toISOString().split('T')[0]
     };
     dispatch({ type: 'EDIT_SUBSCRIPTION', payload: updatedSub });
 
-    toast.success(`Registered payment for ${sub.name}! Next billing rolled forward.`);
+    toast.success(`Registered payment for ${selectedSubToPay.name}! Next billing rolled forward.`);
+    setPayModalOpen(false);
+    setSelectedSubToPay(null);
   };
 
   // Calculate days remaining helper
@@ -143,11 +165,6 @@ export function SubscriptionsTracker() {
     const diffTime = target - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
-  };
-
-  const getAccountName = (accId) => {
-    const acc = state.accounts.find(a => a.id === accId);
-    return acc ? acc.name : 'Default Wallet';
   };
 
   return (
@@ -247,15 +264,11 @@ export function SubscriptionsTracker() {
                     <span className="flex items-center gap-1"><Calendar size={12} /> Next Bill:</span>
                     <span className="font-mono font-semibold text-gray-700 dark:text-gray-300">{sub.nextBillingDate}</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-gray-500">
-                    <span>Pay Wallet:</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-300 max-w-[120px] truncate">{getAccountName(sub.accountId)}</span>
-                  </div>
 
                   {/* Quick pay Action */}
                   <button 
-                    onClick={() => handleMarkAsPaid(sub)}
-                    className="w-full mt-2 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 border border-emerald-500/10"
+                    onClick={() => startMarkAsPaid(sub)}
+                    className="w-full mt-2 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 border border-emerald-500/10"
                   >
                     <Check size={14} /> Record Payment
                   </button>
@@ -301,36 +314,98 @@ export function SubscriptionsTracker() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Funding Wallet</label>
-                    <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white">
-                      {(state.accounts || []).map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Category</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white capitalize">
-                      <option value="bills">Bills & Utilities</option>
-                      <option value="entertainment">Entertainment</option>
-                      <option value="education">Education</option>
-                      <option value="shopping">Shopping</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Category</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white capitalize">
+                    <option value="bills">Bills & Utilities</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="education">Education</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Next Billing Date *</label>
-                  <input type="date" value={nextBillingDate} onChange={(e) => setNextBillingDate(e.target.value)} className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white" required />
+                  <input 
+                    type="date" 
+                    value={nextBillingDate} 
+                    onChange={(e) => setNextBillingDate(e.target.value)} 
+                    min={editData && editData.paidUntil ? editData.paidUntil : ''}
+                    className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white" 
+                    required 
+                  />
+                  {editData && editData.paidUntil && (
+                    <p className="text-[10px] text-amber-500 mt-1.5 ml-1 font-semibold flex items-center gap-1.5 animate-pulse">
+                      <ShieldAlert size={12} /> Cannot be earlier than last paid date: {editData.paidUntil}
+                    </p>
+                  )}
                 </div>
 
                 <button type="submit" className="w-full py-3 mt-2 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-xl shadow-lg flex justify-center items-center gap-2 text-sm">
                   <Check size={16} strokeWidth={3} /> {editData ? 'Save Changes' : 'Register Subscription'}
                 </button>
              </form>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment Confirmation Selection Modal */}
+      {payModalOpen && selectedSubToPay && (
+        <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-navy-900/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setPayModalOpen(false)}></div>
+          <div className="relative w-full max-w-md glass rounded-3xl p-6 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300">
+            
+            {/* Header */}
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="text-gold-500" size={18} />
+                Record Subscription Payment
+              </h3>
+              <button onClick={() => setPayModalOpen(false)} className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"><X size={18} /></button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-gray-50 dark:bg-charcoal-900/50 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Subscription</p>
+                <p className="font-semibold text-gray-900 dark:text-white mt-0.5 text-lg">{selectedSubToPay.name}</p>
+                <p className="text-xs text-gray-500 mt-1 capitalize">{selectedSubToPay.billingCycle} billing cycle</p>
+                
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-4">Amount to Pay</p>
+                <p className="font-mono text-2xl font-bold text-gold-500 mt-0.5">
+                  {currency}{selectedSubToPay.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Pay From Which Wallet? *</label>
+                <select 
+                  value={payAccountId} 
+                  onChange={(e) => setPayAccountId(e.target.value)} 
+                  className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:border-gold-500/50 outline-none text-sm text-gray-900 dark:text-white font-medium"
+                >
+                  {(state.accounts || []).map(a => (
+                    <option key={a.id} value={a.id}>{a.name} ({currency}{a.initialBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setPayModalOpen(false)} 
+                  className="flex-1 py-3 bg-gray-100 dark:bg-charcoal-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors text-sm hover:bg-gray-200 dark:hover:bg-charcoal-900"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmMarkAsPaid}
+                  className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-colors text-sm flex justify-center items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+                >
+                  <Check size={16} strokeWidth={3} /> Record Payment
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

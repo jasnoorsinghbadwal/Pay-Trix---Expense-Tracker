@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
-import { User, Download, LogOut, Check, X, AlertTriangle, Upload, Lock, Unlock } from 'lucide-react';
+import { User, Download, LogOut, Check, X, AlertTriangle, Upload, Lock, Unlock, RefreshCw } from 'lucide-react';
+import { APP_VERSION } from '../version';
 import toast from 'react-hot-toast';
 
 export function ProfilePage() {
@@ -13,6 +14,9 @@ export function ProfilePage() {
   const [lockInput, setLockInput] = useState('');
   const [lockConfirm, setLockConfirm] = useState('');
   const [lockStep, setLockStep] = useState('initial'); // 'initial', 'confirm', 'remove'
+
+  const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle', 'checking', 'latest', 'available', 'error'
+  const [checking, setChecking] = useState(false);
 
   const hasAppLock = !!state.settings.appLock;
 
@@ -108,6 +112,65 @@ export function ProfilePage() {
     setIsLockModalOpen(true);
   };
 
+  const checkForUpdates = async () => {
+    setChecking(true);
+    setUpdateStatus('checking');
+    try {
+      // Append query param to completely bypass CDN caching
+      const response = await fetch(`/version.json?t=${Date.now()}`);
+      if (!response.ok) throw new Error('Failed to fetch version metadata');
+      const data = await response.json();
+      
+      if (data && data.version) {
+        if (data.version === APP_VERSION) {
+          setUpdateStatus('latest');
+          toast.success('PayTrix is up to date!');
+        } else {
+          setUpdateStatus('available');
+          toast.success('New update available!');
+        }
+      } else {
+        throw new Error('Invalid version format');
+      }
+    } catch (error) {
+      setUpdateStatus('error');
+      toast.error('Could not verify latest version');
+      console.error('Update check failed:', error);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleUpdateApp = async () => {
+    const loadingToast = toast.loading('Wiping old cache & updating PayTrix...');
+    try {
+      // 1. Unregister all service workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      
+      // 2. Clear all cache storages
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (let key of keys) {
+          await caches.delete(key);
+        }
+      }
+
+      toast.success('App updated! Relaunching now...', { id: loadingToast });
+      
+      // 3. Force hard reload from server
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 1000);
+    } catch (e) {
+      toast.error('Failed to auto-update. Please reload page manually.', { id: loadingToast });
+    }
+  };
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full pb-4 max-w-4xl mx-auto">
       <div className="glass p-5 md:p-6 rounded-2xl flex items-center gap-4">
@@ -164,6 +227,42 @@ export function ProfilePage() {
 
         {/* Data & Security */}
         <div className="space-y-6 md:space-y-8">
+          {/* App Info & Version Checker */}
+          <div className="glass p-5 md:p-6 rounded-2xl">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white font-sans flex items-center gap-2">
+              PayTrix Info
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              Running Version: <span className="font-mono bg-gray-100 dark:bg-white/5 py-1 px-2.5 rounded-lg text-xs font-semibold select-all text-gray-800 dark:text-gray-300">v1.1.{APP_VERSION.slice(-6)}</span>
+            </p>
+
+            {updateStatus === 'available' ? (
+              <div className="space-y-4">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs rounded-xl flex items-start gap-2">
+                  <AlertTriangle className="shrink-0 mt-0.5" size={16} />
+                  <div>
+                    <span className="font-bold">New Version Available!</span> An update has been pushed with bug fixes and premium upgrades. Click below to install it immediately.
+                  </div>
+                </div>
+                <button
+                  onClick={handleUpdateApp}
+                  className="w-full py-3.5 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm animate-pulse"
+                >
+                  <RefreshCw size={16} className="animate-spin" /> Update & Relaunch App
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={checkForUpdates}
+                disabled={checking}
+                className="w-full py-3.5 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gray-200 dark:border-white/5 text-sm"
+              >
+                <RefreshCw size={16} className={checking ? 'animate-spin' : ''} />
+                {checking ? 'Checking server...' : 'Check for Updates'}
+              </button>
+            )}
+          </div>
+
           <div className="glass p-5 md:p-6 rounded-2xl">
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Sync & Backups</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Keep your data identical across standard browsers and installed home screen PWA versions on this device.</p>

@@ -6,7 +6,7 @@ import { getCategory } from '../utils/constants';
 import { isTransactionInPeriod, getPeriodDates } from '../utils/dateFilters';
 import { CoachInsights } from './CoachInsights';
 
-export function Dashboard() {
+export function Dashboard({ setCurrentTab }) {
   const { state } = useFinance();
   const currency = state.settings.currency;
   const isDark = state.settings.theme === 'dark';
@@ -113,7 +113,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <CoachInsights />
+      <CoachInsights setCurrentTab={setCurrentTab} />
 
       <div className="space-y-6 md:space-y-8">
         {/* Spending Trend */}

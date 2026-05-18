@@ -43,7 +43,7 @@ export function SubscriptionsTracker() {
       setEditData(sub);
       setName(sub.name);
       setAmount(sub.amount);
-      setAccountId(sub.accountId || '');
+      setAccountId(sub.accountId || state.accounts[0]?.id || '');
       setBillingCycle(sub.billingCycle || 'monthly');
       setNextBillingDate(sub.nextBillingDate || '');
       setCategory(sub.category || 'bills');
@@ -76,7 +76,7 @@ export function SubscriptionsTracker() {
       id: editData ? editData.id : `sub-${Date.now()}`,
       name,
       amount: parseFloat(amount),
-      accountId,
+      accountId: accountId || state.accounts[0]?.id || '',
       billingCycle,
       nextBillingDate,
       category,

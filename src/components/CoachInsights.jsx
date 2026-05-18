@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { generateCoachInsights } from '../utils/coachHeuristics';
-import { Sparkles, AlertTriangle, Award, Flame, Brain, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, AlertTriangle, Award, Flame, Brain, ChevronLeft, ChevronRight, Compass } from 'lucide-react';
 
-export function CoachInsights() {
+export function CoachInsights({ setCurrentTab }) {
   const { state } = useFinance();
   const currency = state.settings.currency;
   
@@ -55,14 +55,25 @@ export function CoachInsights() {
       
       {/* Top Banner Indicator */}
       <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
+            </div>
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-gold-400 font-sans">
+              PayTrix Coach Online
+            </span>
           </div>
-          <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-gold-400 font-sans">
-            PayTrix Coach Online
-          </span>
+          {setCurrentTab && (
+            <button 
+              onClick={() => setCurrentTab('forecaster')}
+              className="px-2.5 py-1 bg-gold-500/10 hover:bg-gold-500 text-gold-500 hover:text-navy-900 border border-gold-500/20 hover:border-gold-500 rounded-lg text-[10px] font-bold transition-all duration-300 flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0"
+            >
+              <Compass size={12} className="animate-spin-slow" />
+              <span>Cash Forecaster</span>
+            </button>
+          )}
         </div>
         
         {insights.length > 1 && (

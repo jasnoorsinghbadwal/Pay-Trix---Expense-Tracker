@@ -86,7 +86,7 @@ function App() {
 
   const renderContent = () => {
     switch (currentTab) {
-      case 'dashboard': return <Dashboard />;
+      case 'dashboard': return <Dashboard setCurrentTab={handleTabChange} />;
       case 'accounts': return <AccountsPage />;
       case 'transactions': return <TransactionsPage />;
       case 'budget': return <BudgetPlanner />;

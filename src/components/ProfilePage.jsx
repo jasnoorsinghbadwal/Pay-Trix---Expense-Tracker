@@ -183,50 +183,93 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
         
-        {/* Profile Settings */}
-        <div className="glass p-5 md:p-6 rounded-2xl h-fit">
-          <h3 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Personal Info</h3>
-          <form onSubmit={handleSaveProfile} className="space-y-5">
-            <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1.5 ml-1">Display Name</label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 transition-all text-gray-900 dark:text-white"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1.5 ml-1">Preferred Currency</label>
-              <div className="grid grid-cols-4 gap-2">
-                {['₹', '$', '€', '£'].map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCurrency(c)}
-                    className={`py-2.5 rounded-xl font-mono text-lg transition-all ${currency === c ? 'bg-gold-500 text-navy-900 font-bold shadow-lg shadow-gold-500/30' : 'bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}
-                  >
-                    {c}
-                  </button>
-                ))}
+        {/* Left Column: Personal Settings & Security */}
+        <div className="space-y-6 md:space-y-8">
+          {/* Profile Settings */}
+          <div className="glass p-5 md:p-6 rounded-2xl">
+            <h3 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Personal Info</h3>
+            <form onSubmit={handleSaveProfile} className="space-y-5">
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1.5 ml-1">Display Name</label>
+                <input 
+                  type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 transition-all text-gray-900 dark:text-white"
+                  required
+                />
               </div>
-            </div>
 
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1.5 ml-1">Preferred Currency</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['₹', '$', '€', '£'].map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCurrency(c)}
+                      className={`py-2.5 rounded-xl font-mono text-lg transition-all ${currency === c ? 'bg-gold-500 text-navy-900 font-bold shadow-lg shadow-gold-500/30' : 'bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full py-3.5 mt-2 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <Check size={18} strokeWidth={3} /> Save Changes
+              </button>
+            </form>
+          </div>
+
+          {/* Security */}
+          <div className="glass p-5 md:p-6 rounded-2xl">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Security</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Secure your app with a password or PIN. You will be prompted to enter it whenever you open the app.</p>
+            
             <button 
-              type="submit"
-              className="w-full py-3.5 mt-2 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+              onClick={openLockModal}
+              className={`w-full py-3.5 font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${hasAppLock ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-gold-500 hover:bg-gold-400 text-navy-900 shadow-lg'}`}
             >
-              <Check size={18} strokeWidth={3} /> Save Changes
+              {hasAppLock ? <><Unlock size={18} /> Remove App Lock</> : <><Lock size={18} /> Set App Lock</>}
             </button>
-          </form>
+          </div>
         </div>
 
-        {/* Data & Security */}
+        {/* Right Column: Backup, App Updates & Danger Zone */}
         <div className="space-y-6 md:space-y-8">
+          {/* Sync & Backups */}
+          <div className="glass p-5 md:p-6 rounded-2xl">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Sync & Backups</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Keep your data identical across standard browsers and installed home screen PWA versions on this device.</p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button 
+                onClick={downloadJSON}
+                className="py-3 px-4 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gray-200 dark:border-white/5 text-sm"
+              >
+                <Download size={16} /> Export Backup
+              </button>
+              
+              <label 
+                className="py-3 px-4 bg-gold-500/10 hover:bg-gold-500/20 text-gold-600 dark:text-gold-400 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gold-500/20 dark:border-gold-500/10 cursor-pointer text-sm shadow-sm"
+              >
+                <Upload size={16} /> Import Backup
+                <input 
+                  type="file" 
+                  accept=".json" 
+                  onChange={handleImportJSON} 
+                  className="hidden" 
+                />
+              </label>
+            </div>
+          </div>
+
           {/* App Info & Version Checker */}
           <div className="glass p-5 md:p-6 rounded-2xl">
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white font-sans flex items-center gap-2">
@@ -263,44 +306,7 @@ export function ProfilePage() {
             )}
           </div>
 
-          <div className="glass p-5 md:p-6 rounded-2xl">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Sync & Backups</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Keep your data identical across standard browsers and installed home screen PWA versions on this device.</p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button 
-                onClick={downloadJSON}
-                className="py-3 px-4 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gray-200 dark:border-white/5 text-sm"
-              >
-                <Download size={16} /> Export Backup
-              </button>
-              
-              <label 
-                className="py-3 px-4 bg-gold-500/10 hover:bg-gold-500/20 text-gold-600 dark:text-gold-400 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-gold-500/20 dark:border-gold-500/10 cursor-pointer text-sm shadow-sm"
-              >
-                <Upload size={16} /> Import Backup
-                <input 
-                  type="file" 
-                  accept=".json" 
-                  onChange={handleImportJSON} 
-                  className="hidden" 
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="glass p-5 md:p-6 rounded-2xl">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Security</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Secure your app with a password or PIN. You will be prompted to enter it whenever you open the app.</p>
-            
-            <button 
-              onClick={openLockModal}
-              className={`w-full py-3.5 font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${hasAppLock ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-gold-500 hover:bg-gold-400 text-navy-900 shadow-lg'}`}
-            >
-              {hasAppLock ? <><Unlock size={18} /> Remove App Lock</> : <><Lock size={18} /> Set App Lock</>}
-            </button>
-          </div>
-
+          {/* Account Access */}
           <div className="glass p-5 md:p-6 rounded-2xl border border-rose-200 dark:border-rose-500/20">
             <h3 className="text-lg font-semibold mb-2 text-rose-600 dark:text-rose-400">Account Access</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Log out of your current session. You can choose to keep your data locally or wipe it clean.</p>

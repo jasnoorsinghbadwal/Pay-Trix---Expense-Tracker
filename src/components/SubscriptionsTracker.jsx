@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { Plus, Trash2, Calendar, Check, AlertCircle, Sparkles, X, Edit2, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -21,6 +21,18 @@ export function SubscriptionsTracker() {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedSubToPay, setSelectedSubToPay] = useState(null);
   const [payAccountId, setPayAccountId] = useState('');
+
+  // Handle background scroll lock
+  useEffect(() => {
+    if (isModalOpen || payModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen, payModalOpen]);
 
   // Compute Total Subscription Overhead
   const metrics = useMemo(() => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { User, Download, LogOut, Check, X, AlertTriangle, Upload, Lock, Unlock, RefreshCw } from 'lucide-react';
 import { APP_VERSION } from '../version';
@@ -19,6 +19,18 @@ export function ProfilePage() {
   const [checking, setChecking] = useState(false);
 
   const hasAppLock = !!state.settings.appLock;
+
+  // Handle background scroll lock
+  useEffect(() => {
+    if (isLogoutModalOpen || isLockModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isLogoutModalOpen, isLockModalOpen]);
 
   const handleSaveProfile = (e) => {
     e.preventDefault();

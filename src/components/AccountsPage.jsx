@@ -12,6 +12,18 @@ export function AccountsPage() {
   const [editData, setEditData] = useState(null);
   const [selectedInsightsAccount, setSelectedInsightsAccount] = useState(null);
 
+  // Handle background scroll lock
+  React.useEffect(() => {
+    if (isModalOpen || selectedInsightsAccount) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen, selectedInsightsAccount]);
+
   const [name, setName] = useState('');
   const [type, setType] = useState('bank');
   const [initialBalance, setInitialBalance] = useState('');

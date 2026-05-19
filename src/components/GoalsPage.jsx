@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { Target, Trophy, Calendar, Plus, X, Trash2, ArrowUpRight, ArrowDownRight, Wallet, Sparkles, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -17,6 +17,18 @@ export function GoalsPage() {
   const [activeGoalForAction, setActiveGoalForAction] = useState(null); // { goal, type: 'contribute'|'withdraw' }
   const [actionAmount, setActionAmount] = useState('');
   const [selectedWalletId, setSelectedWalletId] = useState('');
+
+  // Handle background scroll lock
+  useEffect(() => {
+    if (isAdding || activeGoalForAction) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isAdding, activeGoalForAction]);
 
   const colors = [
     { name: 'Gold', value: '#F5A623' },

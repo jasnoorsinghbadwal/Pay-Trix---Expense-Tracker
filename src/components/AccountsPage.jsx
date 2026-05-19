@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFinance } from '../context/FinanceContext';
 import { Wallet, Building2, CreditCard, Plus, Edit2, Trash2, X, Check, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -175,9 +176,9 @@ export function AccountsPage() {
         </div>
       )}
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-navy-900/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={closeModal}></div>
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/55 dark:bg-navy-950/85 backdrop-blur-md animate-in fade-in duration-300" onClick={closeModal}></div>
           <div className="relative w-full max-w-md glass rounded-3xl p-6 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300">
              <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{editData ? 'Edit Account' : 'New Account'}</h3>
@@ -208,7 +209,8 @@ export function AccountsPage() {
                 </button>
              </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {selectedInsightsAccount && (() => {
@@ -248,8 +250,8 @@ export function AccountsPage() {
           .sort((a, b) => new Date(b.date) - new Date(a.date))
           .slice(0, 5);
 
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        return createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-gray-900/55 dark:bg-navy-950/85 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setSelectedInsightsAccount(null)}></div>
             <div className="relative w-full max-w-xl glass rounded-3xl p-5 md:p-6 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 max-h-[72vh] md:max-h-[80vh] flex flex-col">
                
@@ -366,7 +368,8 @@ export function AccountsPage() {
 
                </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useFinance } from '../context/FinanceContext';
 import { User, Download, LogOut, Check, X, AlertTriangle, Upload, Lock, Unlock, RefreshCw } from 'lucide-react';
 import { APP_VERSION } from '../version';
@@ -358,9 +359,9 @@ export function ProfilePage() {
       </div>
 
       {/* Logout Modal */}
-      {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-navy-900/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsLogoutModalOpen(false)}></div>
+      {isLogoutModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/55 dark:bg-navy-950/85 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsLogoutModalOpen(false)}></div>
           
           <div className="relative w-full max-w-md glass rounded-3xl p-6 md:p-8 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 text-center">
              <div className="w-16 h-16 bg-rose-100 dark:bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-500">
@@ -393,13 +394,14 @@ export function ProfilePage() {
                </button>
              </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Lock Settings Modal */}
-      {isLockModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-navy-900/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsLockModalOpen(false)}></div>
+      {isLockModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/55 dark:bg-navy-950/85 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsLockModalOpen(false)}></div>
           
           <div className="relative w-full max-w-md glass rounded-3xl p-6 md:p-8 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 text-center">
              <div className="flex justify-end absolute right-4 top-4">
@@ -450,7 +452,8 @@ export function ProfilePage() {
                </button>
              </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

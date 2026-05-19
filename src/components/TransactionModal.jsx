@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { CATEGORIES } from '../utils/constants';
@@ -86,9 +87,9 @@ export function TransactionModal({ isOpen, onClose, editData = null }) {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/50 dark:bg-navy-900/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-gray-900/55 dark:bg-navy-950/85 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}></div>
       
       <div className="relative w-full max-w-lg glass rounded-3xl p-6 md:p-8 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 flex flex-col max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6 md:mb-8 shrink-0">
@@ -199,6 +200,7 @@ export function TransactionModal({ isOpen, onClose, editData = null }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

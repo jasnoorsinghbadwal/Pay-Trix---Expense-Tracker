@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useFinance } from '../context/FinanceContext';
 import { Target, Trophy, Calendar, Plus, X, Trash2, ArrowUpRight, ArrowDownRight, Wallet, Sparkles, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -530,9 +531,9 @@ export function GoalsPage() {
       )}
 
       {/* Transaction Modal (Contribute / Withdraw) */}
-      {activeGoalForAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-navy-900/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setActiveGoalForAction(null)}></div>
+      {activeGoalForAction && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/55 dark:bg-navy-950/85 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setActiveGoalForAction(null)}></div>
           
           <div className="relative w-full max-w-md glass rounded-3xl p-6 md:p-8 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300">
             <div className="flex justify-between items-center mb-6">
@@ -597,7 +598,8 @@ export function GoalsPage() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

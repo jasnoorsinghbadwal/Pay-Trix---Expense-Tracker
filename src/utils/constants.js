@@ -1,4 +1,4 @@
-import { Coffee, Car, Home, HeartPulse, Gamepad2, ShoppingBag, Briefcase, Sparkles, Receipt, GraduationCap, Target } from 'lucide-react';
+import { Coffee, Car, Home, HeartPulse, Gamepad2, ShoppingBag, Briefcase, Sparkles, Receipt, GraduationCap, Target, TrendingUp } from 'lucide-react';
 
 export const CATEGORIES = [
   { id: 'food', label: 'Food & Dining', icon: Coffee, color: '#F5A623' },
@@ -10,6 +10,7 @@ export const CATEGORIES = [
   { id: 'bills', label: 'Bills & Utilities', icon: Receipt, color: '#06B6D4' },
   { id: 'education', label: 'Education', icon: GraduationCap, color: '#F43F5E' },
   { id: 'savings', label: 'Savings Goals', icon: Target, color: '#10B981' },
+  { id: 'investment', label: 'Investments', icon: TrendingUp, color: '#6366F1' },
   { id: 'income', label: 'Salary/Income', icon: Briefcase, color: '#10B981' },
   { id: 'other', label: 'Others', icon: Sparkles, color: '#6B7280' },
 ];

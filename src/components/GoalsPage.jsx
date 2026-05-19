@@ -19,6 +19,11 @@ export function GoalsPage() {
   const [actionAmount, setActionAmount] = useState('');
   const [selectedWalletId, setSelectedWalletId] = useState('');
 
+  // States for Recurring Goals
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringAmount, setRecurringAmount] = useState('');
+  const [recurringFrequency, setRecurringFrequency] = useState('monthly');
+
   // Handle background scroll lock
   useEffect(() => {
     if (isAdding || activeGoalForAction) {
@@ -93,10 +98,14 @@ export function GoalsPage() {
       id: `goal-${Date.now()}`,
       name: goalName,
       targetAmount: targetVal,
+      initialAmount: initialVal,
       currentAmount: initialVal,
       color,
       deadline: deadline || null,
-      history: initialVal > 0 ? [{ id: `log-${Date.now()}`, type: 'contribution', amount: initialVal, date: new Date().toISOString().split('T')[0] }] : []
+      isRecurring,
+      recurringAmount: isRecurring ? (parseFloat(recurringAmount) || 0) : 0,
+      recurringFrequency: isRecurring ? recurringFrequency : 'monthly',
+      history: []
     };
 
     dispatch({ type: 'ADD_GOAL', payload: newGoal });
@@ -125,6 +134,9 @@ export function GoalsPage() {
     setInitialAmount('0');
     setDeadline('');
     setSelectedWalletId('');
+    setIsRecurring(false);
+    setRecurringAmount('');
+    setRecurringFrequency('monthly');
     setIsAdding(false);
     toast.success('Savings goal set successfully!');
   };
@@ -362,6 +374,50 @@ export function GoalsPage() {
               </div>
             </div>
 
+            {/* Recurring Goal Segment */}
+            <div className="bg-gray-50/50 dark:bg-charcoal-900/40 p-4 rounded-xl border border-gray-100 dark:border-white/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">🔄 Recurring Savings Plan</h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Automate your target milestones by setting a recurring minimum contribution</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-charcoal-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500"></div>
+                </label>
+              </div>
+
+              {isRecurring && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 animate-in slide-in-from-top-2 duration-200">
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1 font-medium">Minimum Recurring Amount ({currency})</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={recurringAmount} 
+                      onChange={e => setRecurringAmount(e.target.value)}
+                      placeholder="e.g. 50" 
+                      className="w-full bg-white dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-3 outline-none text-sm text-gray-900 dark:text-white focus:border-gold-500/50 font-mono"
+                      required={isRecurring}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1 font-medium">Payment Frequency</label>
+                    <select 
+                      value={recurringFrequency} 
+                      onChange={e => setRecurringFrequency(e.target.value)}
+                      className="w-full bg-white dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 px-3 outline-none text-sm text-gray-900 dark:text-white focus:border-gold-500/50 capitalize font-medium"
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                      <option value="custom">Custom Interval</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button 
               type="submit" 
               className="w-full py-3.5 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2"
@@ -477,6 +533,24 @@ export function GoalsPage() {
                   </div>
                 </div>
 
+                {/* Recurring Badge */}
+                {g.isRecurring && g.recurringStatus && (
+                  <div className="my-3 flex items-center justify-between text-[11px] py-1.5 px-2.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-150 dark:border-white/5">
+                    <span className="text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1">
+                      🔄 {currency}{g.recurringAmount}/{g.recurringFrequency === 'weekly' ? 'wk' : g.recurringFrequency === 'monthly' ? 'mo' : g.recurringFrequency === 'yearly' ? 'yr' : 'custom'}
+                    </span>
+                    {g.recurringStatus.paid ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                        ✓ On Track {g.recurringStatus.periodName}
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">
+                        ⚠ Due ({currency}{g.recurringStatus.totalContributed}/{currency}{g.recurringStatus.needed})
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Milestone Checklist */}
                 <div className="border-t border-white/5 pt-3 mb-4 space-y-1.5">
                   <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-2">Milestone Checkpoints</p>
@@ -501,6 +575,11 @@ export function GoalsPage() {
                         return;
                       }
                       setActiveGoalForAction({ goal: g, type: 'contribute' });
+                      if (g.isRecurring && g.recurringAmount) {
+                        setActionAmount(g.recurringAmount.toString());
+                      } else {
+                        setActionAmount('');
+                      }
                     }}
                     disabled={isCompleted}
                     className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border ${isCompleted ? 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-400 cursor-not-allowed' : 'bg-gold-500 hover:bg-gold-400 border-gold-500 text-navy-900 shadow-md shadow-gold-500/10'}`}

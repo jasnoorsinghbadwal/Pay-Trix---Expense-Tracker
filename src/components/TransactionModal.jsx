@@ -168,7 +168,7 @@ export function TransactionModal({ isOpen, onClose, editData = null }) {
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full bg-gray-50 dark:bg-charcoal-900 border border-gray-200 dark:border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 transition-all text-sm text-gray-900 dark:text-white appearance-none"
                   >
-                    {CATEGORIES.filter(c => type === 'income' ? c.id === 'income' : c.id !== 'income').map(c => (
+                    {CATEGORIES.filter(c => type === 'income' ? ['income', 'investment', 'other'].includes(c.id) : c.id !== 'income').map(c => (
                       <option key={c.id} value={c.id}>{c.label}</option>
                     ))}
                   </select>

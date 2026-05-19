@@ -254,5 +254,85 @@ export function FinanceProvider({ children }) {
 }
 
 export function useFinance() {
-  return useContext(FinanceContext);
+  const context = useContext(FinanceContext);
+  if (!context) throw new Error("useFinance must be used within a FinanceProvider");
+  
+  const { state, dispatch } = context;
+
+  // Enrich goals with dynamic live calculations in real-time
+  const enrichedGoals = React.useMemo(() => {
+    return (state.goals || []).map(g => {
+      // Check if there is an initial allocation transaction for this goal
+      const hasInitTx = (state.transactions || []).some(t => t.goalId === g.id && t.title.toLowerCase().includes('allocation'));
+      
+      let current = hasInitTx ? 0 : (parseFloat(g.initialAmount) || 0);
+      
+      (state.transactions || []).forEach(t => {
+        if (t.goalId === g.id) {
+          if (t.type === 'income') {
+            current -= t.amount;
+          } else {
+            current += t.amount;
+          }
+        }
+      });
+      const currentAmount = Math.max(0, current);
+
+      // Recurring Status calculation
+      let recurringStatus = null;
+      if (g.isRecurring) {
+        const now = new Date();
+        const startOfWeek = new Date();
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0,0,0,0);
+        
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        
+        const contributions = (state.transactions || []).filter(t => t.goalId === g.id && t.type === 'expense');
+        let currentPeriodContributions = [];
+        let periodName = '';
+        
+        if (g.recurringFrequency === 'weekly') {
+          periodName = 'this week';
+          currentPeriodContributions = contributions.filter(t => new Date(t.date) >= startOfWeek);
+        } else if (g.recurringFrequency === 'monthly') {
+          periodName = 'this month';
+          currentPeriodContributions = contributions.filter(t => new Date(t.date) >= startOfMonth);
+        } else if (g.recurringFrequency === 'yearly') {
+          periodName = 'this year';
+          currentPeriodContributions = contributions.filter(t => new Date(t.date) >= startOfYear);
+        } else {
+          periodName = 'recently';
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          currentPeriodContributions = contributions.filter(t => new Date(t.date) >= thirtyDaysAgo);
+        }
+        
+        const periodTotal = currentPeriodContributions.reduce((sum, t) => sum + t.amount, 0);
+        const needed = parseFloat(g.recurringAmount) || 0;
+        recurringStatus = {
+          paid: periodTotal >= needed,
+          totalContributed: periodTotal,
+          needed,
+          periodName
+        };
+      }
+
+      return {
+        ...g,
+        currentAmount,
+        recurringStatus
+      };
+    });
+  }, [state.goals, state.transactions]);
+
+  const enrichedState = React.useMemo(() => {
+    return {
+      ...state,
+      goals: enrichedGoals
+    };
+  }, [state, enrichedGoals]);
+
+  return { state: enrichedState, dispatch };
 }

@@ -275,7 +275,7 @@ export function Analytics() {
                           cy="50%"
                           innerRadius={isMobile ? 35 : 55}
                           outerRadius={isMobile ? 48 : 75}
-                          paddingAngle={3}
+                          paddingAngle={0}
                           dataKey="value"
                           stroke="none"
                         >
@@ -283,13 +283,6 @@ export function Analytics() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip 
-                           trigger={isMobile ? "click" : "hover"}
-                           wrapperStyle={{ pointerEvents: 'none' }}
-                           contentStyle={{ backgroundColor: isDark ? '#121212' : '#ffffff', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', color: isDark ? '#fff' : '#000' }}
-                           itemStyle={{ color: isDark ? '#fff' : '#000', fontFamily: 'JetBrains Mono' }}
-                           formatter={(value) => [`${currency}${value.toLocaleString()}`, '']}
-                        />
                       </PieChart>
                     </ResponsiveContainer>
                     {/* Center Text for Donut */}
@@ -306,15 +299,15 @@ export function Analytics() {
                       const IconComponent = entry.icon || Sparkles;
                       return (
                         <div key={index} className="space-y-1">
-                          <div className="flex justify-between items-center text-[10px] sm:text-xs">
+                          <div className="flex justify-between items-center text-[11px] sm:text-xs">
                             <div className="flex items-center gap-1.5 sm:gap-2 text-gray-700 dark:text-gray-300 font-medium min-w-0">
                               <span className="p-1 rounded bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center flex-shrink-0" style={{ color: entry.color }}>
-                                <IconComponent size={10} />
+                                <IconComponent size={12} />
                               </span>
-                              <span className="truncate max-w-[70px] sm:max-w-[120px]">{entry.name}</span>
-                              <span className="text-[8px] sm:text-[10px] text-gray-400 dark:text-gray-500 font-mono font-bold flex-shrink-0">{pct}%</span>
+                              <span className="truncate max-w-[80px] sm:max-w-[120px] text-xs sm:text-sm">{entry.name}</span>
+                              <span className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 font-mono font-bold flex-shrink-0">{pct}%</span>
                             </div>
-                            <span className="font-mono font-bold text-gray-900 dark:text-white flex-shrink-0">{currency}{entry.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            <span className="font-mono font-bold text-gray-900 dark:text-white flex-shrink-0 text-xs">{currency}{entry.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                           </div>
                           {/* Visual Progress Bar */}
                           <div className="h-1 sm:h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">

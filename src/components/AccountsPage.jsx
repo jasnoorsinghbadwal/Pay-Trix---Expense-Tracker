@@ -248,41 +248,43 @@ export function AccountsPage() {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-gray-900/55 dark:bg-navy-950/85 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setSelectedInsightsAccount(null)}></div>
-            <div className="relative w-full max-w-2xl glass rounded-3xl p-6 md:p-8 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="relative w-full max-w-2xl glass rounded-3xl p-5 md:p-8 shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 max-h-[85vh] md:max-h-[90vh] flex flex-col">
                
                {/* Modal Header */}
-               <div className="flex justify-between items-center mb-6">
+               <div className="flex justify-between items-center mb-5 shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gold-500/10 text-gold-600 dark:text-gold-400 flex items-center justify-center shrink-0">
                       <TrendingUp size={20} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{acc.name} Insights</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{acc.type} Wallet Analytics</p>
+                      <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">{acc.name} Insights</h3>
+                      <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 capitalize">{acc.type} Wallet Analytics</p>
                     </div>
                   </div>
-                  <button onClick={() => setSelectedInsightsAccount(null)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                  <button onClick={() => setSelectedInsightsAccount(null)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors shrink-0"><X size={20} /></button>
                </div>
 
-               {/* Balance Metrics Grid */}
-               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gray-50 dark:bg-charcoal-900/50 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
+               {/* Scrollable Content */}
+               <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 md:pr-2 space-y-6">
+                 {/* Balance Metrics Grid */}
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="bg-gray-50 dark:bg-charcoal-900/50 p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 col-span-2 md:col-span-1">
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Current Balance</p>
-                    <p className="font-mono text-xl font-bold text-gray-900 dark:text-white mt-1">
+                    <p className="font-mono text-lg font-bold text-gray-900 dark:text-white mt-1">
                       {currency}{currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/10">
+                  <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-3.5 rounded-2xl border border-emerald-500/10">
                     <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Total Incomes</p>
-                    <p className="font-mono text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
-                      <ArrowUpRight size={16} />
+                    <p className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                      <ArrowUpRight size={14} />
                       {currency}{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <div className="bg-rose-500/5 dark:bg-rose-500/10 p-4 rounded-2xl border border-rose-500/10">
+                  <div className="bg-rose-500/5 dark:bg-rose-500/10 p-3.5 rounded-2xl border border-rose-500/10">
                     <p className="text-[10px] text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wider">Total Expenses</p>
-                    <p className="font-mono text-xl font-bold text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1">
-                      <ArrowDownRight size={16} />
+                    <p className="font-mono text-base font-bold text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1">
+                      <ArrowDownRight size={14} />
                       {currency}{totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
@@ -359,6 +361,7 @@ export function AccountsPage() {
                   )}
                </div>
 
+               </div>
             </div>
           </div>
         );

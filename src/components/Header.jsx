@@ -70,10 +70,6 @@ export function Header({ title, currentTab, setCurrentTab }) {
         
         <button 
           onClick={() => dispatch({ type: 'TOGGLE_THEME' })}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            dispatch({ type: 'TOGGLE_THEME' });
-          }}
           className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-charcoal-800 flex items-center justify-center border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-charcoal-900 transition-colors text-gray-600 dark:text-gray-300"
         >
           {state.settings.theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -81,10 +77,6 @@ export function Header({ title, currentTab, setCurrentTab }) {
         
         <button 
           onClick={() => setCurrentTab('profile')}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            setCurrentTab('profile');
-          }}
           className="flex items-center gap-3 pl-3 md:pl-5 border-l border-gray-200 dark:border-white/10 hover:opacity-80 active:scale-95 transition-all text-left outline-none cursor-pointer group"
         >
            <div className="text-right hidden sm:block">

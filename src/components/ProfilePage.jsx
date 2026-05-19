@@ -306,6 +306,27 @@ export function ProfilePage() {
             )}
           </div>
 
+          {/* Help & Support / Developer Info Card */}
+          <div className="glass p-5 md:p-6 rounded-2xl border border-gold-500/20">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white font-sans flex items-center gap-2">
+              Help & Support
+            </h3>
+            <div className="text-xs md:text-sm text-gray-500 dark:text-gray-400 space-y-3">
+              <p>
+                <strong>PayTrix</strong> is a premium, high-fidelity personal finance tracker and cash-flow forecaster designed to give you complete visibility over your financial operations.
+              </p>
+              <div className="space-y-1.5 pl-2 border-l border-gold-500/40">
+                <p>⚡ <strong>Wallets & Accounts:</strong> Track cash, bank accounts, and cards in real-time.</p>
+                <p>📊 <strong>Multi-Dimensional Analytics:</strong> Drill down by Category or Expense Type.</p>
+                <p>🎯 <strong>Savings Goals:</strong> Create dedicated allocations and progress counters.</p>
+                <p>🔮 <strong>Forecasts & Coaching:</strong> Predictive cash flows and smart insights.</p>
+              </div>
+              <div className="pt-2 border-t border-gray-200 dark:border-white/10 text-xs">
+                Developed & Engineered with passion by <span className="font-bold text-gold-500 dark:text-gold-400">Jasnoor Singh Badwal</span>
+              </div>
+            </div>
+          </div>
+
           {/* Account Access */}
           <div className="glass p-5 md:p-6 rounded-2xl border border-rose-200 dark:border-rose-500/20">
             <h3 className="text-lg font-semibold mb-2 text-rose-600 dark:text-rose-400">Account Access</h3>
